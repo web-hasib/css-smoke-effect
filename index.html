@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Colorful Smoke/Fog Effect</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            display: block;
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+        .controls {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 5px;
+            color: white;
+            z-index: 100;
+        }
+        .controls label {
+            margin-right: 10px;
+        }
+        .hide-controls {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="smokeCanvas"></canvas>
+    
+    <div class="controls" id="controls">
+        <label>
+            <input type="checkbox" id="rainbow" checked> Rainbow Mode
+        </label>
+        <label>
+            <input type="range" id="density" min="1" max="20" value="10"> Density
+        </label>
+        <label>
+            <input type="range" id="size" min="1" max="20" value="10"> Size
+        </label>
+        <label>
+            <input type="range" id="speed" min="1" max="20" value="10"> Speed
+        </label>
+        <label>
+            <input type="checkbox" id="autoMode"> Auto Mode
+        </label>
+    </div>
+    
+    <button class="hide-controls" id="toggleControls">Hide Controls</button>
+
+    <script>
+        const canvas = document.getElementById('smokeCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Controls
+        const rainbowCheck = document.getElementById('rainbow');
+        const densitySlider = document.getElementById('density');
+        const sizeSlider = document.getElementById('size');
+        const speedSlider = document.getElementById('speed');
+        const autoModeCheck = document.getElementById('autoMode');
+        const controlsPanel = document.getElementById('controls');
+        const toggleControlsBtn = document.getElementById('toggleControls');
+        
+        // Toggle controls visibility
+        toggleControlsBtn.addEventListener('click', () => {
+            if (controlsPanel.style.display === 'none') {
+                controlsPanel.style.display = 'block';
+                toggleControlsBtn.textContent = 'Hide Controls';
+            } else {
+                controlsPanel.style.display = 'none';
+                toggleControlsBtn.textContent = 'Show Controls';
+            }
+        });
+        
+        // Set canvas to full window size
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        
+        // Mouse position
+        let mouseX = canvas.width / 2;
+        let mouseY = canvas.height / 2;
+        let autoX = canvas.width / 2;
+        let autoY = canvas.height / 2;
+        let autoVX = 2;
+        let autoVY = 2;
+        
+        // Particle system
+        const particles = [];
+        
+        // Color cycling
+        let hue = 0;
+        
+        // Create particles
+        function createParticles(x, y, count) {
+            for (let i = 0; i < count; i++) {
+                const size = Math.random() * sizeSlider.value + 5;
+                const speed = speedSlider.value / 10;
+                
+                let particleColor;
+                if (rainbowCheck.checked) {
+                    particleColor = `hsla(${hue + Math.random() * 30}, 100%, 60%, ${Math.random() * 0.3})`;
+                } else {
+                    // Fixed colors for non-rainbow mode
+                    const colors = [
+                        `rgba(255, 0, 0, ${Math.random() * 0.3})`,     // Red
+                        `rgba(255, 165, 0, ${Math.random() * 0.3})`,   // Orange
+                        `rgba(255, 255, 0, ${Math.random() * 0.3})`,   // Yellow
+                        `rgba(0, 255, 0, ${Math.random() * 0.3})`,     // Green
+                        `rgba(0, 0, 255, ${Math.random() * 0.3})`,     // Blue
+                        `rgba(128, 0, 128, ${Math.random() * 0.3})`,   // Purple
+                        `rgba(255, 105, 180, ${Math.random() * 0.3})`, // Pink
+                        `rgba(255, 255, 255, ${Math.random() * 0.3})`, // White
+                    ];
+                    particleColor = colors[Math.floor(Math.random() * colors.length)];
+                }
+                
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * speed * 2,
+                    vy: (Math.random() - 0.5) * speed * 2,
+                    size: size,
+                    color: particleColor,
+                    life: Math.random() * 100 + 50,
+                    opacity: Math.random() * 0.5 + 0.2
+                });
+            }
+            
+            // Cycle hue for rainbow effect
+            hue = (hue + 1) % 360;
+        }
+        
+        // Update mouse position
+        window.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+            
+            // Only create particles on mouse move if auto mode is off
+            if (!autoModeCheck.checked) {
+                const densityFactor = densitySlider.value / 10;
+                createParticles(mouseX, mouseY, Math.floor(5 * densityFactor));
+            }
+        });
+        
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+        
+        // Update auto movement
+        function updateAutoPosition() {
+            autoX += autoVX;
+            autoY += autoVY;
+            
+            // Bounce off edges
+            if (autoX <= 0 || autoX >= canvas.width) {
+                autoVX = -autoVX;
+                autoX = Math.max(0, Math.min(autoX, canvas.width));
+            }
+            
+            if (autoY <= 0 || autoY >= canvas.height) {
+                autoVY = -autoVY;
+                autoY = Math.max(0, Math.min(autoY, canvas.height));
+            }
+            
+            // Random direction changes
+            if (Math.random() < 0.01) {
+                autoVX = (Math.random() - 0.5) * 4;
+                autoVY = (Math.random() - 0.5) * 4;
+            }
+            
+            const densityFactor = densitySlider.value / 10;
+            createParticles(autoX, autoY, Math.floor(5 * densityFactor));
+        }
+        
+        // Animation loop
+        function animate() {
+            // Create semi-transparent layer for trail effect
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Handle auto mode
+            if (autoModeCheck.checked) {
+                updateAutoPosition();
+            }
+            
+            // Update and draw particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                
+                // Update position
+                p.x += p.vx;
+                p.y += p.vy;
+                
+                // Random movement for smokiness
+                p.vx += (Math.random() - 0.5) * 0.3;
+                p.vy += (Math.random() - 0.5) * 0.3;
+                
+                // Add some upward drift for smoke effect
+                p.vy -= 0.05;
+                
+                // Slow down
+                p.vx *= 0.98;
+                p.vy *= 0.98;
+                
+                // Decrease life
+                p.life--;
+                
+                // Decrease size and opacity
+                p.size *= 0.99;
+                p.opacity *= 0.99;
+                
+                // Remove dead particles
+                if (p.life <= 0 || p.size < 0.5) {
+                    particles.splice(i, 1);
+                    continue;
+                }
+                
+                // Draw particle
+                ctx.beginPath();
+                const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
+                
+                // Extract base color for gradient
+                let baseColor;
+                if (p.color.startsWith('hsla')) {
+                    // For HSLA colors
+                    const colorMatch = p.color.match(/hsla\(([^,]+),\s*([^,]+),\s*([^,]+)/);
+                    if (colorMatch) {
+                        baseColor = `hsla(${colorMatch[1]}, ${colorMatch[2]}, ${colorMatch[3]}`;
+                    } else {
+                        baseColor = p.color;
+                    }
+                } else {
+                    // For RGBA colors
+                    baseColor = p.color.replace(/rgba\(([^,]+,[^,]+,[^,]+),.*/, 'rgba($1');
+                }
+                
+                gradient.addColorStop(0, `${baseColor}, ${p.opacity})`);
+                gradient.addColorStop(1, `${baseColor}, 0)`);
+                
+                ctx.fillStyle = gradient;
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            requestAnimationFrame(animate);
+        }
+        
+        // Initialize with some particles at center
+        createParticles(canvas.width / 2, canvas.height / 2, 50);
+        
+        // Start animation
+        animate();
+    </script>
+</body>
+</html>
